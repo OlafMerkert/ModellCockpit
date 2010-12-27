@@ -20,13 +20,13 @@ class GuiPibu (MeterStack, PibuCommander):
         MeterStack.__init__(self)
 
     def steuern_P(self, gas, lenkung, gang):
-        print "Gas: %f,  Lenkung: %f,  Gang: %d" % (gas, lenkung, gang)
+        # print "Gas: %f,  Lenkung: %f,  Gang: %d" % (gas, lenkung, gang)
         # schicke die Daten an die GUI
         self.put("Drehzahl", gas * 1000)
         self.put("Lenkung //rpm", lenkung)
         self.put("Gang //volt", gang)
         # warte ein bisschen
-        time.sleep(0.1)
+        time.sleep(0.01)
 
     def motor_aus(self):
         print "|| Motor ausgeschaltet. || ******************************"

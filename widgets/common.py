@@ -5,6 +5,8 @@ __author__ = "Olaf Merkert"
 
 from errorrep import UnknownDisplayException, UnimplementedMethod
 from math import log, ceil, floor
+from PyQt4 import QtCore
+import time
 
 class Data (object):
 
@@ -75,7 +77,7 @@ class NumericData (Data):
         """Wird automatisch bei Aenderung der Grenzen aufgerufen."""
         pass
 
-class DataCollection (object):
+class DataCollection (QtCore.QObject):
     cockpit_modules = []
     # update_freq = 5
 
@@ -83,15 +85,18 @@ class DataCollection (object):
         self._modules = {}
         self._transformations = {}
 
+    def has_module(self, name):
+        return (name in self._modules)
+
     def put(self, name, value):
         """Zeige einen Wert auf dem passenden Cockpitelement an.  Bei
         Bedarf wird eine Anzeige neu erzeugt."""
-        if name in self._modules:
-            m = self._modules[name]
+        if self.has_module(name):
+            self._modules[name].put(value, True)
         else:
-            m = self.create_module(name)
-            self._modules[name] = m
-        m.put(value, True)
+            self.create_module(name)
+            if self.has_module(name):
+                self._modules[name].put(value, True)
 
     def tput(self, name, value):
         """Wie put(), aber falls eine Transformation gewuenscht wurde,

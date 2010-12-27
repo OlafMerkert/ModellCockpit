@@ -3,10 +3,13 @@
 
 __author__ = "Olaf Merkert"
 
-from PyQt4 import QtGui
+from PyQt4 import QtCore, QtGui
 import common
 
 class MeterStack (QtGui.QWidget, common.DataCollection):
+    
+    # Signal zum Erzeugen eines neuen Moduls
+    create_module_signal = QtCore.pyqtSignal(str)
 
     def __init__(self, parent = None):
         QtGui.QWidget.__init__(self, parent = parent)
@@ -15,12 +18,27 @@ class MeterStack (QtGui.QWidget, common.DataCollection):
         self.layout = QtGui.QVBoxLayout()
         self.setLayout(self.layout)
         # self.setMinimumSize( 600, 100 )
+        
+        self.create_module_signal.connect(self.create_module_slot,
+                                          type=QtCore.Qt.QueuedConnection)
+        self._ready = QtCore.QWaitCondition()
+        self._mutex = QtCore.QMutex()
 
-    def create_module(self, name):
+    @QtCore.pyqtSlot(str)
+    def create_module_slot(self, name):
+        name = str(name)
         cls = self.find_cls(name)
         m = cls(name)
         self.layout.addWidget(m)
-        return m
+        self._modules[name] = m
+        self._ready.wakeAll()
+        # return m
+
+    def create_module(self, name):
+        self._mutex.lock()
+        self.create_module_signal.emit(name)
+        self._ready.wait(self._mutex)
+        self._mutex.unlock()
 
 def test_container():
     m = MeterStack()
