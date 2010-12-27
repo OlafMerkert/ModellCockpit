@@ -14,12 +14,25 @@ from pygame.joystick import get_count as js_count, Joystick as js_Joystick
 pygame.init()
 
 # Erlaube nur Joystickbuttons und Hat-Switches als Event-Quellen
-# (sowie eigene Events)
-pygame.event.set_allowed([
-    pygame.JOYBUTTONDOWN,
-    pygame.JOYHATMOTION,
-    pygame.USEREVENT,
-    ])
+# (sowie eigene Events).  Theoretisch waere es eleganter, set_allowed
+# zu verwenden, aber das scheint nicht zu funktionieren.
+pygame.event.set_blocked([
+    pygame.QUIT,
+    pygame.ACTIVEEVENT,
+    pygame.KEYDOWN,
+    pygame.KEYUP,
+    pygame.MOUSEMOTION,
+    pygame.MOUSEBUTTONUP,
+    pygame.MOUSEBUTTONDOWN,
+    pygame.JOYAXISMOTION,
+    pygame.JOYBALLMOTION,
+#    pygame.JOYHATMOTION,
+    pygame.JOYBUTTONUP,
+#    pygame.JOYBUTTONDOWN,
+    pygame.VIDEORESIZE,
+    pygame.VIDEOEXPOSE,
+#    pygame.USEREVENT,
+])
 
 # TODO Kalibrationsverfahren
 
