@@ -44,7 +44,6 @@ def main():
     s = app.exec_()
     # Terminiere den Loop
     l.stop()
-    l.join()
     sys.exit(s)
 
 if __name__=="__main__":

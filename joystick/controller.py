@@ -6,7 +6,7 @@ from __future__ import division
 __author__ = "Olaf Merkert"
 
 from errorrep import JoystickNotFound, UnimplementedMethod
-from thread_helpers import Loop, PygameLoop
+from thread_helpers import Loop
 
 # Lade und initialisiere Pygame Joystick Modul
 import pygame

@@ -3,63 +3,52 @@
 
 __author__ = "Olaf Merkert"
 
-import pygame
-pygame.init()
-from threading import Thread, Timer, Event
+from PyQt4 import QtCore
 
 class Abort (Exception):
+    """Werfe diese Exception, um einen Loop abzubrechen."""
     pass
 
-class StoppableThread (Thread):
-    """Eine einfache Erweiterung von Thread, damit man den Thread auch
-    gut stoppen kann."""
-
-    def __init__(self, *args, **kwargs):
-        Thread.__init__(self, *args, **kwargs)
-        self._stop = Event()
-
-    def stop(self):
-        self._stop.set()
-
-    def is_stopped(self):
-        return self._stop.isSet()
-
-
-class Loop (StoppableThread):
+class Loop (QtCore.QThread):
     """Eine einfache Klasse, um eine Funktion wieder und
     wieder aufzurufen."""
 
     def __init__(self, fn):
-        StoppableThread.__init__(self)
+        QtCore.QThread.__init__(self)
         self._fn = fn
+        self._running = False
 
     def run(self):
+        self._running = True
         try:
-            while not self.is_stopped():
+            while self._running:
                 self._fn()
         except Abort:
             pass
 
-class PygameLoop (Loop):
+    def is_running(self):
+        return self._running
 
     def stop(self):
-        StoppableThread.stop(self)
-        pygame.event.post(
-            pygame.event.Event(pygame.USEREVENT, joy=0))
+        self._running = False
+        self.wait()
 
-class TimedLoop (StoppableThread):
+    def __del__(self):
+        self.stop()
+
+
+class TimedLoop (Loop):
     """Eine einfache Klasse, um eine Funktion in regelmaessigen
     Zeitintervallen wieder und wieder aufzurufen."""
 
     def __init__(self, fn, interval = 0.1):
-        StoppableThread.__init__(self)
-        self._fn = fn
+        Loop.__init__(self, fn)
         self._interval = interval
 
     def run(self):
         try:
-            while not self.is_stopped():
-                t = Timer(self._interval, self._fn)
-                t.start()
+            while self._running:
+                self._fn()
+                self.sleep(self._interval)
         except Abort:
             pass
