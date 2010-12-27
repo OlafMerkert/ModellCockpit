@@ -26,7 +26,7 @@ class GuiPibu (MeterStack, PibuCommander):
         self.put("Lenkung //rpm", lenkung)
         self.put("Gang //volt", gang)
         # warte ein bisschen
-        time.sleep(0.01)
+        time.sleep(0.1)
 
     def motor_aus(self):
         print "|| Motor ausgeschaltet. || ******************************"
@@ -38,14 +38,13 @@ def main():
 
     gp.show()
 
-    l = [js.run_event_loop(),
-         js.run_send_loop()]
-    # BUG Qt Oberflaeche ist noch nicht am laufen -> Problem
+    l = js.send_loop()
+    l.start()
+    # FIXME Qt Oberflaeche ist noch nicht am laufen -> Problem
     s = app.exec_()
-    # Terminiere die beiden Loops
-    for t in l:
-        t.stop()
-        t.join()
+    # Terminiere den Loop
+    l.stop()
+    l.join()
     sys.exit(s)
 
 if __name__=="__main__":

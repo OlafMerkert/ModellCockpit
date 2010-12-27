@@ -4,7 +4,8 @@
 __author__ = "Olaf Merkert"
 
 from transforms import rescale_positive, diff_mix, deadzone, sign
-from controller import Joystick, Steuerung, Steuerung_A, Steuerung_P, Steuerung_F, Steuerung_H
+from controller import Joystick, Steuerung, \
+     Steuerung_A, Steuerung_P, Steuerung_F, Steuerung_H
 
 # ==============================================================================
 # Konfiguration X-Box Controller
@@ -16,7 +17,7 @@ class XBoxController (Joystick, Steuerung):
         Joystick.__init__(self, "X-Box")
         Steuerung.__init__(self, cmdr)
 
-class XBoxController_A (XBoxController, Steuerung_A):
+class XBoxController_A (Steuerung_A, XBoxController):
 
     def axis_data(self):
         # Gas
@@ -26,7 +27,7 @@ class XBoxController_A (XBoxController, Steuerung_A):
 
 XBoxController.profiles["A"] = XBoxController_A
 
-class XBoxController_P (XBoxController, Steuerung_P):
+class XBoxController_P (Steuerung_P, XBoxController):
 
     def axis_data(self):
         # Gas und Gangschaltung

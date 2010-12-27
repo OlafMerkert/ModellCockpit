@@ -5,7 +5,7 @@ from __future__ import division
 
 __author__ = "Olaf Merkert"
 
-from errorrep import JoystickNotFound
+from errorrep import JoystickNotFound, UnimplementedMethod
 from thread_helpers import Loop, PygameLoop
 
 # Lade und initialisiere Pygame Joystick Modul
@@ -20,23 +20,6 @@ pygame.event.set_allowed([
     pygame.JOYHATMOTION,
     pygame.USEREVENT,
     ])
-pygame.event.set_blocked([
-    pygame.QUIT,
-    pygame.ACTIVEEVENT,
-    pygame.KEYDOWN,
-    pygame.KEYUP,
-    pygame.MOUSEMOTION,
-    pygame.MOUSEBUTTONUP,
-    pygame.MOUSEBUTTONDOWN,
-    pygame.JOYAXISMOTION,
-    pygame.JOYBALLMOTION,
-#    pygame.JOYHATMOTION,
-#    pygame.JOYBUTTONUP,
-    pygame.JOYBUTTONDOWN,
-    pygame.VIDEORESIZE,
-    pygame.VIDEOEXPOSE,
-#    pygame.USEREVENT,
-])
 
 # TODO Kalibrationsverfahren
 
@@ -74,31 +57,48 @@ class Joystick (object):
     def a(self, nr):
         return self._device.get_axis(nr)
 
+    def calibrate(self, axes):
+        raise UnimplementedMethod
+
     def handle_next_event(self):
-        ev = pygame.event.wait()
-        # Teste zuerst, ob das Event von diesem Joystick kommt
-        if ev.joy == self._id:
-            # Button event
-            if ev.type == pygame.JOYBUTTONDOWN:
+        """Schaue nach, ob ein Event vorliegt.  Falls ja, verarbeite
+        und gebe False zurueck.  Sonst True."""
+        ev = pygame.event.poll()
+        # Button event
+        if ev.type == pygame.JOYBUTTONDOWN:
+            # Teste, ob das Event von diesem Joystick kommt
+            if ev.joy == self._id:
                 self.handle_button(ev.button)
-            # Hat event
-            elif ev.type == pygame.JOYHATMOTION:
+                return True
+        # Hat event
+        elif ev.type == pygame.JOYHATMOTION:
+            # Teste, ob das Event von diesem Joystick kommt
+            if ev.joy == self._id:
                 self.handle_hat(ev.hat, ev.value)
+                return True
+        # Leere Event Queue oder falsches Event
+        return False
 
-    def handle_button(nr):
+    def handle_button(self, nr):
         pass
 
-    def handle_hat(nr, dir):
+    def handle_hat(self, nr, dir):
         pass
 
-    def run_event_loop(self):
-        l = PygameLoop(self.handle_next_event)
+    def next_command(self):
+        if not self.handle_next_event():
+            # Geraeteeingabe holen
+            pygame.event.pump()
+            self.send()
+
+    def send(self):
+        raise UnimplementedMethod
+
+    def send_loop(self):
+        l = Loop(self.next_command)
         # l.setDaemon(True)
-        l.start()
-        # NOTE Threadreferenz speichern?
         return l
 
-# TODO Fasse die beiden Threads zu einem einzigen zusammen
 
 class Steuerung (object):
 
@@ -115,42 +115,27 @@ class Steuerung (object):
     def axis_data(self):
         raise UnimplementedMethod
 
-    def run_send_loop(self):
-        l = Loop(self.send)
-        # l.setDaemon(True)
-        l.start()
-        # NOTE Threadreferenz speichern
-        return l
 
 class Steuerung_A (Steuerung):
 
     def send(self):
-        # regelmaessig die Event-Queue bearbeiten
-        pygame.event.pump()
         data = self.axis_data()
         self._commander.steuern_A(*data)
 
 class Steuerung_P (Steuerung):
 
     def send(self):
-        # regelmaessig die Event-Queue bearbeiten
-        pygame.event.pump()
         data = self.axis_data()
         self._commander.steuern_P(*data)
 
 class Steuerung_F (Steuerung):
 
     def send(self):
-        # regelmaessig die Event-Queue bearbeiten
-        pygame.event.pump()
         data = self.axis_data()
         self._commander.steuern_F(*data)
 
 class Steuerung_H (Steuerung):
 
     def send(self):
-        # regelmaessig die Event-Queue bearbeiten
-        pygame.event.pump()
         data = self.axis_data()
         self._commander.steuern_H(*data)
-
