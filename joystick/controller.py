@@ -34,7 +34,6 @@ pygame.event.set_blocked([
 #    pygame.USEREVENT,
 ])
 
-# TODO Kalibrationsverfahren
 
 # Finden von Joysticks
 def find_joystick(id_or_name):
@@ -47,14 +46,15 @@ def find_joystick(id_or_name):
     elif isinstance(id_or_name, int) \
              and (0 <= id_or_name < nr): # Id-Suche
         return js_Joystick(id_or_name)
-    else:
-        raise JoystickNotFound(id_or_name)
+    raise JoystickNotFound(id_or_name)
 
 class Joystick (object):
 
     def __init__(self, id_or_name = 0):
+        self._initstate = False
         self._device = find_joystick(id_or_name)
         self._device.init()
+        self._initstate = True
         self._id = self._device.get_id()
         # self._num = (self._device.get_numaxes(),
         #              self._device.get_numhats(),
@@ -62,7 +62,8 @@ class Joystick (object):
 
 
     def __del__(self):
-        self._device.quit()
+        if self._initstate:
+            self._device.quit()
 
     def name(self):
         return self._device.get_name()
