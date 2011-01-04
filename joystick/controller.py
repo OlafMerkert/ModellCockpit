@@ -6,7 +6,7 @@ from __future__ import division
 __author__ = "Olaf Merkert"
 
 from errorrep import JoystickNotFound, UnimplementedMethod
-from thread_helpers import Loop
+from thread_helpers import Loop, Abort
 
 # Lade und initialisiere Pygame Joystick Modul
 import pygame
@@ -70,8 +70,33 @@ class Joystick (object):
     def a(self, nr):
         return self._device.get_axis(nr)
 
-    def calibrate(self, axes):
-        raise UnimplementedMethod
+    def calibrate_helper(self, axes, tolerance=0.05):
+        maxes = list(axes)
+        mines = list(axes)
+        M = 1 - tolerance
+        m = - M
+        def loop_fun():
+            # Eingabe holen
+            pygame.event.pump()
+            if len(maxes) + len(mines) > 0:
+                # Warte auf maximale Auslenkung
+                for i, a in enumerate(maxes):
+                    if self.a(a) >= M:
+                        del maxes[i]
+                        break
+                # Warte auf minimale Auslenkung
+                for i, a in enumerate(mines):
+                    if self.a(a) <= m:
+                        del mines[i]
+                        break
+            else:
+                raise Abort()
+        # return loop_fun
+        return Loop(loop_fun)
+
+    def calibrate(self):
+        raise UnimplementedMethod()
+
 
     def handle_next_event(self):
         """Schaue nach, ob ein Event vorliegt.  Falls ja, verarbeite

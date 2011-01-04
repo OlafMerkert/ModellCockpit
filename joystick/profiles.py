@@ -17,6 +17,11 @@ class XBoxController (Joystick, Steuerung):
         Joystick.__init__(self, "X-Box")
         Steuerung.__init__(self, cmdr)
 
+    def calibrate(self):
+        lo = self.calibrate_helper([2, 5], 0.05)
+        lo.start()
+        lo.wait()
+
 class XBoxController_A (Steuerung_A, XBoxController):
 
     def axis_data(self):
