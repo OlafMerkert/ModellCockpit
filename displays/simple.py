@@ -9,6 +9,34 @@ from PyQt4 import QtCore, QtGui
 import numpy as np
 from math import log, ceil, floor
 
+class MeterStack (QtGui.QWidget):
+
+    types = {}
+
+    def __init__(self, parent = None):
+        QtGui.QWidget.__init__(self, parent = parent)
+        self.layout = QtGui.QHBoxLayout()
+        self.setLayout(self.layout)
+        self.meters = []
+
+    def create_display(self, name, type, interval="dynamic", unit=""):
+        c = self.types[type]
+
+        m = c(name=name, interval=interval, unit=unit)
+        self.meters.append(m)
+        self.layout.addWidget(m)
+        return m
+
+    @classmethod
+    def register(cls, type, clss):
+        cls.types[type] = clss
+        return clss
+
+    def show(self):
+        # Passe die Groesse des Fensters an
+        self.setGeometry(0, 0, 20+300 * len(self.meters), 20+300)
+        QtGui.QWidget.show(self)
+
 colortheme = {
     "background": "b1b1b6ff",
     "foreground": "666b72ff",
@@ -79,8 +107,8 @@ class Display (object):
 
 class CircularDisplay (QtGui.QWidget, Display):
 
-    def __init__(self, name, interval, unit):
-        QtGui.QWidget.__init__(self)
+    def __init__(self, name, interval, unit, parent = None):
+        QtGui.QWidget.__init__(self, parent = parent)
         Display.__init__(self, name, interval, unit)
         self._value = 0
         self.setupUi()
@@ -169,13 +197,15 @@ class CircularDisplay (QtGui.QWidget, Display):
         la = select_color("labels")
         pa.setPen(la)
         pa.setFont(select_font(20))
-        pa.drawText(100, 240, 100, 40,
-                    QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter,
-                    "[%s]" % self._unit)
+        if len(self._unit) > 0:
+            pa.drawText(100, 240, 100, 40,
+                        QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter,
+                        "[%s]" % self._unit)
         pa.setFont(select_font(16))
-        pa.drawText(100, 180, 100, 30,
-                    QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter,
-                    self._name)
+        if len(self._name) > 0:
+            pa.drawText(100, 180, 100, 30,
+                        QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter,
+                        self._name)
 
     def drawIndicator(self, pa):
         # Rechne den Winkel
@@ -201,3 +231,4 @@ class CircularDisplay (QtGui.QWidget, Display):
         pa.drawPolygon(indicator)
         pa.setOpacity(1)
 
+MeterStack.register("circular", CircularDisplay)

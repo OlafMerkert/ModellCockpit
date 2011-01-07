@@ -8,9 +8,11 @@ import displays
 
 from joystick.commands import PibuCommander
 from joystick.profiles import XBoxController
-from displays.terminal_out import MeterStack
+from displays.simple import MeterStack
 
-import time
+from PyQt4 import QtCore, QtGui
+
+import time, sys
 
 class PibuDisplays (MeterStack, PibuCommander):
 
@@ -36,24 +38,19 @@ class PibuDisplays (MeterStack, PibuCommander):
             interval="dynamic",
             )
 
-        self.motor_status = self.create_display(
-            name="Motor Aus",
-            type="light",
-            )
-
-
     def steuern_P(self, gas, lenkung, gang):
         self.gas.put(gas * 1000)
         self.lenkung.put(lenkung)
         self.gang.put(gang)
         # warte kurz
-        # time.sleep(0.01)
+        time.sleep(1)
 
     def motor_aus(self):
-        self.motor_status.put(1)
+        print "** Motor ausschalten."
 
 
 def main():
+    app = QtGui.QApplication(sys.argv)
     pd = PibuDisplays()
     js = XBoxController.create(pd)
 
@@ -61,7 +58,9 @@ def main():
 
     l = js.send_loop()
     l.start()
+    s = app.exec_()
     l.wait()
+    sys.exit(s)
 
 if __name__=="__main__":
     main()
