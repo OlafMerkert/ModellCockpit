@@ -92,7 +92,8 @@ class Display (object):
 
     def put(self, data):
         self._value = data
-        if self._dynamic:
+        if self._dynamic and \
+               not self._lower <= data <= self._upper:
             self.recalc_bounds(data)
         self._put(data)
 
