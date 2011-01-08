@@ -53,7 +53,11 @@ class PibuDisplays (MeterStack, PibuCommander):
 def main():
     app = QtGui.QApplication(sys.argv)
     pd = PibuDisplays()
+    # Joystick erzeugen und kalbibrieren
     js = XBoxController.create(pd)
+    print "Warte auf Kalibration."
+    js.calibrate()
+    print "Joystick kalibriert."
 
     pd.show()
 
