@@ -123,8 +123,12 @@ class CircularDisplay (QtGui.QWidget, Display):
 
     def put(self, data):
         self.lock_value.lockForWrite()
-        Display.put(self, data)
+        self._value = data
         self.lock_value.unlock()
+        # Pruefe, ob die Grenzen geaendert werden muessen
+        if self._dynamic and not \
+               (self._lower <= data <= self._upper):
+            self.recalc_bounds(data)
         # Benachrichtigung zum Neuzeichnen
         self.update()
 
@@ -146,28 +150,28 @@ class CircularDisplay (QtGui.QWidget, Display):
         self.paint_helper(self.background,
                           [self.drawDisk,
                            self.drawLabels])
-        # Stelle sicher, dass alle pixmaps gefuellt sind.
-        self.skala = self.background
         # Erzeuge den Zeiger
         self.notch = self.make_pixmap()
         self.paint_helper(self.notch, [self.drawNotch])
+        # Erzeuge Pixmap fuer Skala, setupSkala zeichnet nur darauf
+        self.skala = self.make_pixmap()
         self.setupSkala()
 
 
     @QtCore.pyqtSlot()
     def setupSkala(self):
-        pm = self.make_pixmap()
+        # Zeichne direkt auf die alte Pixmap
+        self.lock_skala.lockForWrite()
+        self.skala.fill(QtCore.Qt.transparent)
         self.paint_helper(self.skala,
                           [self.drawTicks])
-        self.lock_skala.lockForWrite()
-        self.skala = pm
         self.lock_skala.unlock()
 
     def make_pixmap(self):
         pm = QtGui.QPixmap(2 * self.radius, 2 * self.radius)
         pm.fill(QtCore.Qt.transparent)
         return pm
-        
+
     def paint_helper(self, target, funs):
         painter = QtGui.QPainter()
         painter.begin(target)
@@ -208,12 +212,14 @@ class CircularDisplay (QtGui.QWidget, Display):
         self.lock_skala.unlock()
         # Aendere Koordinaten
         painter.translate(self.radius, self.radius)
-        # Zeichne Zeiger -- fuer Performance kein Antialias
+        # Zeichne Zeiger -- Antialiasing kurz anschalten
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
         self.drawIndicator(painter)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, False)
         # Aendere Koordinaten zurueck
         painter.translate(-self.radius, -self.radius)
         painter.drawPixmap(0, 0, self.notch)
-        painter.end()    
+        painter.end()
 
 
     def drawDisk(self, pa):
@@ -254,8 +260,8 @@ class CircularDisplay (QtGui.QWidget, Display):
                     -scaling * self.radius * y)
         start_x, start_y = scale_and_transform(x_pos, y_pos, 0.8)
         end_x, end_y     = scale_and_transform(x_pos, y_pos, 0.9)
-        label_x, label_y = scale_and_transform(x_pos, y_pos, 0.7)
-                       
+        label_x, label_y = scale_and_transform(x_pos, y_pos, 0.65)
+
         # Zeichne die Striche
         ti = select_color("ticks")
         # pa.setBrush(None)
@@ -268,11 +274,10 @@ class CircularDisplay (QtGui.QWidget, Display):
         pa.setPen(ti)
         pa.setFont(select_font(12))
         for x, y, label in zip(label_x, label_y, labels):
-            # TODO Bessere Formatierung der Beschriftung
             # TODO Elegantere Ausrichtung des Texts
             pa.drawText(x - 40, y - 10, 80, 20,
                         QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter,
-                        "%d" % label)
+                        "{0:g}".format(label))
 
     def drawLabels(self, pa):
         la = select_color("labels")
