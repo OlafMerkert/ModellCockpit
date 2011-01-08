@@ -33,8 +33,6 @@ class MeterStack (QtGui.QWidget):
         return clss
 
     def show(self):
-        # Passe die Groesse des Fensters an
-        self.setGeometry(0, 0, 20+300 * len(self.meters), 20+300)
         QtGui.QWidget.show(self)
 
 colortheme = {
@@ -74,7 +72,7 @@ class Display (object):
 
     def __init__(self, name, interval, unit):
          self._name = name
-         # TODO Verarbeiten der Bereichsgrenzen
+         # Verarbeiten der Bereichsgrenzen
          # Unterstuetzung fuer dynamische Skalierung
          if interval == "dynamic":
              self._dynamic = True
@@ -119,8 +117,17 @@ class CircularDisplay (QtGui.QWidget, Display):
         self.update()
     
     def setupUi(self):
-        self.setGeometry(0, 0, 300, 300)
+        # Radius der Anzeige
+        self.radius = 150
         self.setWindowTitle("Circular Display")
+
+
+    # Sorge dafuer, dass das Widget gross genug dargestellt wird
+    def sizeHint(self):
+        return QtCore.QSize(2 * self.radius, 2 * self.radius)
+
+    def minimumSizeHint(self):
+        return QtCore.QSize(2 * self.radius, 2 * self.radius)
 
     def paintEvent(self, event):
         painter = QtGui.QPainter()
@@ -128,10 +135,13 @@ class CircularDisplay (QtGui.QWidget, Display):
         # Aktiviere Antialiasing
         painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
         painter.setRenderHint(QtGui.QPainter.TextAntialiasing, True)
+        # Aendere Koordinaten
+        painter.translate(self.radius, self.radius)
+        # Zeichne
         self.drawDisk(painter)
         self.drawTicks(painter)
         self.drawLabels(painter)
-        self.drawIndicator(painter)
+        self.drawIndicator(painter, self._value)
         self.drawNotch(painter)
         painter.end()
 
@@ -139,12 +149,13 @@ class CircularDisplay (QtGui.QWidget, Display):
         bg = select_color("background")
         ri = select_color("ridge")
         pa.setBrush(bg)
-        pen = QtGui.QPen(ri, 5, QtCore.Qt.SolidLine)
+        ridge_strength = 5
+        pen = QtGui.QPen(ri, ridge_strength, QtCore.Qt.SolidLine)
         pa.setPen(pen)
-        # TODO anpassen fuer nicht-fixe Groesse
-        shrink = 5
-        pa.drawEllipse(shrink, shrink, # Ecke
-                       300 - 2*shrink, 300 - 2*shrink) # Breite, Hoehe
+        diam = 2 * (self.radius - ridge_strength)
+        offset = -self.radius + ridge_strength
+        pa.drawEllipse(offset, offset, # Ecke
+                       diam, diam) # Breite, Hoehe
 
     def drawNotch(self, pa):
         fg = select_color("foreground")
@@ -152,26 +163,22 @@ class CircularDisplay (QtGui.QWidget, Display):
         pa.setBrush(fg)
         pen = QtGui.QPen(ri, 3, QtCore.Qt.SolidLine)
         pa.setPen(pen)
-        # TODO anpassen fuer nicht-fixe Groesse
-        radius = 20
-        shrink = 150 - radius
-        pa.drawEllipse(shrink, shrink, # Ecke
-                       300 - 2*shrink, 300 - 2*shrink) # Breite, Hoehe
+        offset = 0.13 * self.radius
+        pa.drawEllipse(-offset, -offset, # Ecke
+                       2 * offset, 2 * offset) # Breite, Hoehe
 
-    def drawTicks(self, pa):
+    def drawTicks(self, pa, nr = 11):
         # Berechne die Positionen fuer die gewuenschte Anzahl von
         # Markierungen
-        nr = 11
         angles = np.linspace(0.1 * 2*np.pi, 0.9 * 2*np.pi, nr)
         labels = np.linspace(self.get_lower(), self.get_upper(), nr)
         x_pos = - np.sin(angles)
         y_pos = - np.cos(angles)
         # Bestimme Positionen fuer Anfang/Ende der Striche und
         # Beschriftungen
-        size = 150
         def scale_and_transform(x, y, scaling):
-            return (size + scaling * size * x,
-                    size - scaling * size * y)
+            return (scaling * self.radius * x,
+                    -scaling * self.radius * y)
         start_x, start_y = scale_and_transform(x_pos, y_pos, 0.8)
         end_x, end_y     = scale_and_transform(x_pos, y_pos, 0.9)
         label_x, label_y = scale_and_transform(x_pos, y_pos, 0.7)
@@ -179,10 +186,10 @@ class CircularDisplay (QtGui.QWidget, Display):
         # Zeichne die Striche
         ti = select_color("ticks")
         # pa.setBrush(None)
-        pen = QtGui.QPen(ti, 7, QtCore.Qt.SolidLine)
+        pen = QtGui.QPen(ti, 4, QtCore.Qt.SolidLine)
         pa.setPen(pen)
         for coords in zip(start_x, start_y,
-                                  end_x,   end_y):
+                          end_x,   end_y):
             pa.drawLine(*coords)
         # Zeichne die Beschriftung der Striche
         pa.setPen(ti)
@@ -199,16 +206,16 @@ class CircularDisplay (QtGui.QWidget, Display):
         pa.setPen(la)
         pa.setFont(select_font(20))
         if len(self._unit) > 0:
-            pa.drawText(100, 240, 100, 40,
+            pa.drawText(-50, 0.75 * self.radius - 20, 100, 40,
                         QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter,
                         "[%s]" % self._unit)
         pa.setFont(select_font(16))
         if len(self._name) > 0:
-            pa.drawText(100, 180, 100, 30,
+            pa.drawText(-50, 0.4 * self.radius - 15, 100, 30,
                         QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter,
                         self._name)
 
-    def drawIndicator(self, pa):
+    def drawIndicator(self, pa, value):
         # Rechne den Winkel
         l, u = self.get_lower(), self.get_upper()
         la, ua = 0.1 *2*np.pi, 0.9 *2*np.pi
@@ -216,13 +223,12 @@ class CircularDisplay (QtGui.QWidget, Display):
             s = (ua - la) / (u - l)
         except ZeroDivisionError:
             s = 1
-        angle = (self._value - l) * s  + la
+        angle = (value - l) * s  + la
         all_angles = np.array([angle - np.pi/2, angle, angle + np.pi/2, angle + np.pi])
         # Rechne die Position
-        scales = np.array([15, 100, 15, 30])
-        size = 150 
-        x_pos, y_pos = (size + scales * (- np.sin(all_angles)),
-                        size - scales * (- np.cos(all_angles)))
+        scales = self.radius * np.array([0.1, 0.75, 0.1, 0.2])
+        x_pos, y_pos = (scales * (- np.sin(all_angles)),
+                        -scales * (- np.cos(all_angles)))
         # Fuellfarbe
         ind = select_color("indicator")
         pa.setBrush(ind)
@@ -233,3 +239,8 @@ class CircularDisplay (QtGui.QWidget, Display):
         pa.setOpacity(1)
 
 MeterStack.register("circular", CircularDisplay)
+
+def bsp():
+    w = CircularDisplay(name="Drehzahl", interval=[-10, 90], unit="rpm")
+    w.show()
+    return w
