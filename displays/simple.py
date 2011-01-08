@@ -110,6 +110,7 @@ class CircularDisplay (QtGui.QWidget, Display):
         QtGui.QWidget.__init__(self, parent = parent)
         Display.__init__(self, name, interval, unit)
         self._value = 0
+        self.def_calc_angle()
         self.setupUi()
 
     def _put(self, data):
@@ -120,7 +121,41 @@ class CircularDisplay (QtGui.QWidget, Display):
         # Radius der Anzeige
         self.radius = 150
         self.setWindowTitle("Circular Display")
+        # Erzeuge die Hintegrundelemente
+        self.background = QtGui.QPixmap(2 * self.radius, 2 * self.radius)
+        self.paint_helper(self.background,
+                          [self.drawDisk,
+                           self.drawLabels])
+        self.setupSkala()
+        # Erzeuge den Zeiger
+        self.indicator = QtGui.QPixmap(2 * self.radius, 2 * self.radius)
+        self.paint_helper(self.indicator,
+                          [lambda p: self.drawIndicator(p, 0),
+                           self.drawNotch])
 
+    def setupSkala(self):
+        self.skala = QtGui.QPixmap(2 * self.radius, 2 * self.radius)
+        self.paint_helper(self.skala,
+                          [self.drawTicks])
+
+    def recalc_bounds(self, data):
+        Display.recalc_bounds(self, data)
+        self.def_calc_angle()
+        self.setupSkala()
+        
+    def paint_helper(self, target, funs):
+        painter = QtGui.QPainter()
+        painter.begin(target)
+        # Aktiviere Antialiasing
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        painter.setRenderHint(QtGui.QPainter.TextAntialiasing, True)
+        # Aendere Koordinaten
+        painter.translate(self.radius, self.radius)
+        # Male
+        for f in funs:
+            f(painter)
+        # Ende
+        painter.end()
 
     # Sorge dafuer, dass das Widget gross genug dargestellt wird
     def sizeHint(self):
@@ -130,20 +165,13 @@ class CircularDisplay (QtGui.QWidget, Display):
         return QtCore.QSize(2 * self.radius, 2 * self.radius)
 
     def paintEvent(self, event):
-        painter = QtGui.QPainter()
-        painter.begin(self)
-        # Aktiviere Antialiasing
-        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
-        painter.setRenderHint(QtGui.QPainter.TextAntialiasing, True)
-        # Aendere Koordinaten
-        painter.translate(self.radius, self.radius)
-        # Zeichne
-        self.drawDisk(painter)
-        self.drawTicks(painter)
-        self.drawLabels(painter)
-        self.drawIndicator(painter, self._value)
-        self.drawNotch(painter)
-        painter.end()
+        self.paint_helper(self,
+                          [self.drawDisk,
+                           self.drawTicks,
+                           self.drawLabels,
+                           self.drawIndicator,
+                           self.drawNotch])
+
 
     def drawDisk(self, pa):
         bg = select_color("background")
@@ -215,7 +243,7 @@ class CircularDisplay (QtGui.QWidget, Display):
                         QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter,
                         self._name)
 
-    def drawIndicator(self, pa, value):
+    def def_calc_angle(self):
         # Rechne den Winkel
         l, u = self.get_lower(), self.get_upper()
         la, ua = 0.1 *2*np.pi, 0.9 *2*np.pi
@@ -223,7 +251,13 @@ class CircularDisplay (QtGui.QWidget, Display):
             s = (ua - la) / (u - l)
         except ZeroDivisionError:
             s = 1
-        angle = (value - l) * s  + la
+        self.calc_angle = lambda value: (value - l) * s  + la
+    
+    def drawIndicator(self, pa, angle = None):
+        # Normalerweise wird der Winkel berechnet
+        if angle == None:
+            angle = self.calc_angle(self._value)
+        # Berechne die Punkte des Zeigers
         all_angles = np.array([angle - np.pi/2, angle, angle + np.pi/2, angle + np.pi])
         # Rechne die Position
         scales = self.radius * np.array([0.1, 0.75, 0.1, 0.2])
