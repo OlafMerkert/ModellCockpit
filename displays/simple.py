@@ -138,9 +138,10 @@ class CircularDisplay (QtGui.QWidget, Display):
         self.lock_bounds.unlock()
         # Passe bei Aenderung die Winkelberechnung und die Skala an
         self.def_calc_angle()
-        # setupSkala() sollte nur aus dem GUI-Thread aus aufgerufen werden
+        # setupSkala() sollte nur aus dem GUI-Thread aus aufgerufen
+        # werden
         self.skala_repaint_signal.emit()
-    
+
     def setupUi(self, radius = 150):
         # Radius der Anzeige
         self.radius = radius
@@ -308,7 +309,7 @@ class CircularDisplay (QtGui.QWidget, Display):
         self.lock_calc_angle.lockForWrite()
         self.calc_angle = lambda value: (value - l) * s  + la
         self.lock_calc_angle.unlock()
-    
+
     def drawIndicator(self, pa, angle = None):
         # Normalerweise wird der Winkel berechnet
         if angle == None:
@@ -318,7 +319,10 @@ class CircularDisplay (QtGui.QWidget, Display):
             self.lock_calc_angle.unlock()
             self.lock_value.unlock()
         # Berechne die Punkte des Zeigers
-        all_angles = np.array([angle - np.pi/2, angle, angle + np.pi/2, angle + np.pi])
+        all_angles = np.array([angle - np.pi/2,
+                               angle,
+                               angle + np.pi/2,
+                               angle + np.pi])
         # Rechne die Position
         scales = self.radius * np.array([0.1, 0.75, 0.1, 0.2])
         x_pos, y_pos = (scales * (- np.sin(all_angles)),
@@ -328,15 +332,9 @@ class CircularDisplay (QtGui.QWidget, Display):
         pa.setBrush(ind)
         pa.setOpacity(0.8)
         # Zeichne den Zeiger
-        indicator = QtGui.QPolygonF([QtCore.QPointF(x,y) for x,y in zip(x_pos, y_pos)])
+        indicator = QtGui.QPolygonF([QtCore.QPointF(x,y)
+                                     for x,y in zip(x_pos, y_pos)])
         pa.drawPolygon(indicator)
         pa.setOpacity(1)
 
 MeterStack.register("circular", CircularDisplay)
-
-def bsp():
-    w = CircularDisplay(name="Drehzahl", interval="dynamic", unit="rpm")
-    w.show()
-    return w
-
-# BUG Skala wird nicht richtig aktualisiert

@@ -43,6 +43,7 @@ class PibuDisplays (MeterStack, PibuCommander):
         self.lenkung.put(lenkung)
         self.gang.put(gang)
         # warte kurz
+        # gibt ausserdem dem QtMainThread Zeit zum Zeichnen
         time.sleep(0.1)
 
     def motor_aus(self):
