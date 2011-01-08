@@ -93,7 +93,6 @@ class Display (object):
         if self._dynamic and not \
                (self._lower <= data <= self._upper):
             self.recalc_bounds(data)
-        self._put(data)
 
     def recalc_bounds(self, data):
         if self._lower > data:
@@ -101,8 +100,6 @@ class Display (object):
         if data > self._upper:
             self._upper = upscale(data)
 
-    def _put(self, data):
-        raise UnimplementedMethod()
 
 class CircularDisplay (QtGui.QWidget, Display):
 
@@ -112,40 +109,59 @@ class CircularDisplay (QtGui.QWidget, Display):
         QtGui.QWidget.__init__(self, parent = parent)
         Display.__init__(self, name, interval, unit)
         self._value = 0
+        self.setupLocks()
         self.def_calc_angle()
         self.setupUi()
         self.skala_repaint_signal.connect(self.setupSkala)
 
-    def _put(self, data):
+    def setupLocks(self):
+        self.lock_value = QtCore.QReadWriteLock()
+        self.lock_bounds = QtCore.QReadWriteLock()
+        self.lock_skala = QtCore.QReadWriteLock()
+        self.lock_calc_angle = QtCore.QReadWriteLock()
+
+
+    def put(self, data):
+        self.lock_value.lockForWrite()
+        Display.put(self, data)
+        self.lock_value.unlock()
         # Benachrichtigung zum Neuzeichnen
         self.update()
 
     def recalc_bounds(self, data):
+        self.lock_bounds.lockForWrite()
         Display.recalc_bounds(self, data)
+        self.lock_bounds.unlock()
         # Passe bei Aenderung die Winkelberechnung und die Skala an
         self.def_calc_angle()
         # setupSkala() sollte nur aus dem GUI-Thread aus aufgerufen werden
         self.skala_repaint_signal.emit()
     
-    def setupUi(self):
+    def setupUi(self, radius = 150):
         # Radius der Anzeige
-        self.radius = 150
+        self.radius = radius
         self.setWindowTitle("Circular Display")
         # Erzeuge die Hintegrundelemente
         self.background = self.make_pixmap()
         self.paint_helper(self.background,
                           [self.drawDisk,
                            self.drawLabels])
-        self.setupSkala()
+        # Stelle sicher, dass alle pixmaps gefuellt sind.
+        self.skala = self.background
         # Erzeuge den Zeiger
         self.notch = self.make_pixmap()
         self.paint_helper(self.notch, [self.drawNotch])
+        self.setupSkala()
+
 
     @QtCore.pyqtSlot()
     def setupSkala(self):
-        self.skala = self.make_pixmap()
+        pm = self.make_pixmap()
         self.paint_helper(self.skala,
                           [self.drawTicks])
+        self.lock_skala.lockForWrite()
+        self.skala = pm
+        self.lock_skala.unlock()
 
     def make_pixmap(self):
         pm = QtGui.QPixmap(2 * self.radius, 2 * self.radius)
@@ -187,7 +203,9 @@ class CircularDisplay (QtGui.QWidget, Display):
         painter.setCompositionMode(QtGui.QPainter.CompositionMode_SourceOver)
         # Male die Pixmaps
         painter.drawPixmap(0, 0, self.background)
+        self.lock_skala.lockForRead()
         painter.drawPixmap(0, 0, self.skala)
+        self.lock_skala.unlock()
         # Aendere Koordinaten
         painter.translate(self.radius, self.radius)
         # Zeichne Zeiger -- fuer Performance kein Antialias
@@ -224,7 +242,9 @@ class CircularDisplay (QtGui.QWidget, Display):
         # Berechne die Positionen fuer die gewuenschte Anzahl von
         # Markierungen
         angles = np.linspace(0.1 * 2*np.pi, 0.9 * 2*np.pi, nr)
+        self.lock_bounds.lockForRead()
         labels = np.linspace(self.get_lower(), self.get_upper(), nr)
+        self.lock_bounds.unlock()
         x_pos = - np.sin(angles)
         y_pos = - np.cos(angles)
         # Bestimme Positionen fuer Anfang/Ende der Striche und
@@ -272,18 +292,26 @@ class CircularDisplay (QtGui.QWidget, Display):
         # Vollkreis
         vk = 2 * np.pi
         # Rechne den Winkel
+        self.lock_bounds.lockForRead()
         l, u = self.get_lower(), self.get_upper()
+        self.lock_bounds.unlock()
         la, ua = 0.1 *vk, 0.9 *vk
         try:
             s = (ua - la) / (u - l)
         except ZeroDivisionError:
             s = 1
+        self.lock_calc_angle.lockForWrite()
         self.calc_angle = lambda value: (value - l) * s  + la
+        self.lock_calc_angle.unlock()
     
     def drawIndicator(self, pa, angle = None):
         # Normalerweise wird der Winkel berechnet
         if angle == None:
+            self.lock_value.lockForRead()
+            self.lock_calc_angle.lockForRead()
             angle = self.calc_angle(self._value) # * np.pi / 180
+            self.lock_calc_angle.unlock()
+            self.lock_value.unlock()
         # Berechne die Punkte des Zeigers
         all_angles = np.array([angle - np.pi/2, angle, angle + np.pi/2, angle + np.pi])
         # Rechne die Position
@@ -305,3 +333,5 @@ def bsp():
     w = CircularDisplay(name="Drehzahl", interval="dynamic", unit="rpm")
     w.show()
     return w
+
+# BUG Skala wird nicht richtig aktualisiert

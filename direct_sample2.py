@@ -43,7 +43,7 @@ class PibuDisplays (MeterStack, PibuCommander):
         self.lenkung.put(lenkung)
         self.gang.put(gang)
         # warte kurz
-        time.sleep(0.01)
+        time.sleep(0.1)
 
     def motor_aus(self):
         print "** Motor ausschalten."
@@ -59,7 +59,7 @@ def main():
     l = js.send_loop()
     l.start()
     s = app.exec_()
-    l.wait()
+    l.stop()
     sys.exit(s)
 
 if __name__=="__main__":
