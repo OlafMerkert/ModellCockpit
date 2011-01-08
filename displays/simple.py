@@ -90,8 +90,8 @@ class Display (object):
 
     def put(self, data):
         self._value = data
-        if self._dynamic and \
-               not self._lower <= data <= self._upper:
+        if self._dynamic and not \
+               (self._lower <= data <= self._upper):
             self.recalc_bounds(data)
         self._put(data)
 
@@ -116,32 +116,36 @@ class CircularDisplay (QtGui.QWidget, Display):
     def _put(self, data):
         # Benachrichtigung zum Neuzeichnen
         self.update()
+
+    def recalc_bounds(self, data):
+        Display.recalc_bounds(self, data)
+        # Passe bei Aenderung die Winkelberechnung und die Skala an
+        self.def_calc_angle()
+        self.setupSkala()
     
     def setupUi(self):
         # Radius der Anzeige
         self.radius = 150
         self.setWindowTitle("Circular Display")
         # Erzeuge die Hintegrundelemente
-        self.background = QtGui.QPixmap(2 * self.radius, 2 * self.radius)
+        self.background = self.make_pixmap()
         self.paint_helper(self.background,
                           [self.drawDisk,
                            self.drawLabels])
         self.setupSkala()
         # Erzeuge den Zeiger
-        self.indicator = QtGui.QPixmap(2 * self.radius, 2 * self.radius)
-        self.paint_helper(self.indicator,
-                          [lambda p: self.drawIndicator(p, 0),
-                           self.drawNotch])
+        self.notch = self.make_pixmap()
+        self.paint_helper(self.notch, [self.drawNotch])
 
     def setupSkala(self):
-        self.skala = QtGui.QPixmap(2 * self.radius, 2 * self.radius)
+        self.skala = self.make_pixmap()
         self.paint_helper(self.skala,
                           [self.drawTicks])
 
-    def recalc_bounds(self, data):
-        Display.recalc_bounds(self, data)
-        self.def_calc_angle()
-        self.setupSkala()
+    def make_pixmap(self):
+        pm = QtGui.QPixmap(2 * self.radius, 2 * self.radius)
+        pm.fill(QtCore.Qt.transparent)
+        return pm
         
     def paint_helper(self, target, funs):
         painter = QtGui.QPainter()
@@ -164,13 +168,31 @@ class CircularDisplay (QtGui.QWidget, Display):
     def minimumSizeHint(self):
         return QtCore.QSize(2 * self.radius, 2 * self.radius)
 
-    def paintEvent(self, event):
+    def paintEvent_old(self, event):
         self.paint_helper(self,
                           [self.drawDisk,
                            self.drawTicks,
                            self.drawLabels,
                            self.drawIndicator,
                            self.drawNotch])
+
+    def paintEvent(self, event):
+        painter = QtGui.QPainter()
+        painter.begin(self)
+        painter.setCompositionMode(QtGui.QPainter.CompositionMode_SourceOver)
+        # Male die Pixmaps
+        painter.drawPixmap(0, 0, self.background)
+        painter.drawPixmap(0, 0, self.skala)
+        # Aendere Koordinaten
+        painter.translate(self.radius, self.radius)
+        # Zeichne Zeiger und schalte kurz Antialias ein
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        self.drawIndicator(painter)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, False)
+        # Aendere Koordinaten zurueck
+        painter.translate(-self.radius, -self.radius)
+        painter.drawPixmap(0, 0, self.notch)
+        painter.end()    
 
 
     def drawDisk(self, pa):
@@ -244,9 +266,11 @@ class CircularDisplay (QtGui.QWidget, Display):
                         self._name)
 
     def def_calc_angle(self):
+        # Vollkreis
+        vk = 2 * np.pi
         # Rechne den Winkel
         l, u = self.get_lower(), self.get_upper()
-        la, ua = 0.1 *2*np.pi, 0.9 *2*np.pi
+        la, ua = 0.1 *vk, 0.9 *vk
         try:
             s = (ua - la) / (u - l)
         except ZeroDivisionError:
@@ -256,7 +280,7 @@ class CircularDisplay (QtGui.QWidget, Display):
     def drawIndicator(self, pa, angle = None):
         # Normalerweise wird der Winkel berechnet
         if angle == None:
-            angle = self.calc_angle(self._value)
+            angle = self.calc_angle(self._value) # * np.pi / 180
         # Berechne die Punkte des Zeigers
         all_angles = np.array([angle - np.pi/2, angle, angle + np.pi/2, angle + np.pi])
         # Rechne die Position
@@ -275,6 +299,6 @@ class CircularDisplay (QtGui.QWidget, Display):
 MeterStack.register("circular", CircularDisplay)
 
 def bsp():
-    w = CircularDisplay(name="Drehzahl", interval=[-10, 90], unit="rpm")
+    w = CircularDisplay(name="Drehzahl", interval="dynamic", unit="rpm")
     w.show()
     return w
