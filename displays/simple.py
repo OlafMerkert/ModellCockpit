@@ -106,12 +106,15 @@ class Display (object):
 
 class CircularDisplay (QtGui.QWidget, Display):
 
+    skala_repaint_signal = QtCore.pyqtSignal()
+
     def __init__(self, name, interval, unit, parent = None):
         QtGui.QWidget.__init__(self, parent = parent)
         Display.__init__(self, name, interval, unit)
         self._value = 0
         self.def_calc_angle()
         self.setupUi()
+        self.skala_repaint_signal.connect(self.setupSkala)
 
     def _put(self, data):
         # Benachrichtigung zum Neuzeichnen
@@ -121,7 +124,8 @@ class CircularDisplay (QtGui.QWidget, Display):
         Display.recalc_bounds(self, data)
         # Passe bei Aenderung die Winkelberechnung und die Skala an
         self.def_calc_angle()
-        self.setupSkala()
+        # setupSkala() sollte nur aus dem GUI-Thread aus aufgerufen werden
+        self.skala_repaint_signal.emit()
     
     def setupUi(self):
         # Radius der Anzeige
@@ -137,6 +141,7 @@ class CircularDisplay (QtGui.QWidget, Display):
         self.notch = self.make_pixmap()
         self.paint_helper(self.notch, [self.drawNotch])
 
+    @QtCore.pyqtSlot()
     def setupSkala(self):
         self.skala = self.make_pixmap()
         self.paint_helper(self.skala,
@@ -185,10 +190,8 @@ class CircularDisplay (QtGui.QWidget, Display):
         painter.drawPixmap(0, 0, self.skala)
         # Aendere Koordinaten
         painter.translate(self.radius, self.radius)
-        # Zeichne Zeiger und schalte kurz Antialias ein
-        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        # Zeichne Zeiger -- fuer Performance kein Antialias
         self.drawIndicator(painter)
-        painter.setRenderHint(QtGui.QPainter.Antialiasing, False)
         # Aendere Koordinaten zurueck
         painter.translate(-self.radius, -self.radius)
         painter.drawPixmap(0, 0, self.notch)
