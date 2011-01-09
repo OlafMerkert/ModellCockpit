@@ -7,7 +7,7 @@ import joystick
 import displays
 
 from joystick.commands import PibuCommander
-from joystick.profiles import XBoxController
+from joystick.profiles import detect_joystick
 from displays.simple import MeterStack
 
 from PyQt4 import QtCore, QtGui
@@ -54,7 +54,7 @@ def main():
     app = QtGui.QApplication(sys.argv)
     pd = PibuDisplays()
     # Joystick erzeugen und kalbibrieren
-    js = XBoxController.create(pd)
+    js = detect_joystick(pd)
     print "Warte auf Kalibration."
     js.calibrate()
     print "Joystick kalibriert."

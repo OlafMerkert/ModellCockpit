@@ -12,6 +12,7 @@ class UnknownDisplayException (Exception):
         return "UnknownDisplay: %s" % self._display_name
 
 class UnimplementedMethod (Exception):
+
     pass
 
 class JoystickNotFound (Exception):
@@ -26,3 +27,9 @@ class JoystickNotFound (Exception):
             return "Joystick name not found: %s" % self._id_or_name
         else:
             return "Joystick must be identified by int or str"
+
+class NoMatchingProfile (Exception):
+
+    def __str__(self):
+        return "None of the connected joysticks supports" + \
+               " the requested commander profile."
