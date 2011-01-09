@@ -8,7 +8,7 @@ import displays
 
 from joystick.commands import PibuCommander
 from joystick.profiles import detect_joystick
-from displays.simple import MeterStack
+from displays.common import MeterStack
 
 from PyQt4 import QtCore, QtGui
 
