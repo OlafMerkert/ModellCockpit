@@ -67,7 +67,7 @@ class XBoxController_A (Steuerung_A, XBoxController):
         lenkung = self.a(0)
         return (gas, lenkung)
 
-XBoxController.profiles["A"] = XBoxController_A
+XBoxController.register("A", XBoxController_A)
 
 class XBoxController_P (Steuerung_P, XBoxController):
 
@@ -84,4 +84,40 @@ class XBoxController_P (Steuerung_P, XBoxController):
         if nr == 7:
             self._commander.motor_aus()
 
-XBoxController.profiles["P"] = XBoxController_P
+XBoxController.register("P", XBoxController_P)
+
+# ==============================================================================
+# Konfiguration G940
+
+class G940 (Joystick, Steuerung):
+    profiles = {}
+
+    def __init__(self, cmdr, id = None):
+        if id == None:
+            Joystick.__init__(self, "G940")
+        else:
+            Joystick.__init__(self, id)
+        Steuerung.__init__(self, cmdr)
+
+    def calibrate(self):
+        lo = self.calibrate_helper([], 0.05)
+        lo.start()
+        lo.wait()
+
+register_profile("G940", G940)
+
+class G940_F (Steuerung_F, G940):
+
+    def axis_data(self):
+        schub = deadzone(diff_mix( self.a(6), 1), 0.05)
+        return (schub, self.a(2), self.a(0), self.a(1))
+
+G940.register("F", G940_F)
+
+class G940_H (Steuerung_H, G940):
+
+    def axis_data(self):
+        schub = deadzone(0, diff_mix( -1, self.a(6) ), 0.05)
+        return (schub, self.a(2), self.a(0), self.a(1))
+
+G940.register("H", G940_H)

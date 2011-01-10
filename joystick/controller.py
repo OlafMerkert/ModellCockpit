@@ -151,6 +151,11 @@ class Steuerung (object):
         c = cls.profiles[cmdr.fahrzeug_typ()]
         return c(cmdr)
 
+    @classmethod]
+    def register(cls, typ, clss):
+        """Melde ein Profil fuer einen bestimmten Fahrzeugtyp an."""
+        cls.profiles[typ] = clss
+
     def axis_data(self):
         raise UnimplementedMethod
 
