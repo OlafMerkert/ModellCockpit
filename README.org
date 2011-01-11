@@ -1,0 +1,102 @@
+* ModellCockpit
+Kleine Python Module, um Modellfahrzeuge zu steuern und Fahrzeugdaten anzuzeigen.
+
+* Steuerung des Fahrzeugs
+** Modellierung des Fahrzeugs
+Man benoetigt eine Klasse, die die Steuersignale umsetzt und an das
+Fahrzeug schickt.  Momentan gibt es in ~joystick.commands~ Prototypen
+fuer Autos, Pistenwalzen, Flugzeuge und Hubschrauber.  Zu den
+Steuerdaten gehoeren zum einen analoge Daten wie Gas und Lenkung, zum
+Anderen koennen auch Einzel-Befehle wie "Licht an/aus" bereitgestellt
+werden.  Die Klasse sollte jeweils mitteilen, welche Sorte Fahrzeug
+man steuert.
+
+** Eingabe mit dem Joystick
+Um Profile fuer einen neuen Joystick zu erstellen, braucht man zuerst
+eine Basisklasse, die ~Joystick~ und ~Steuerung~ erweitert.  Hier kann
+man z.B. noch eine Kalibrierungsroutine ~calibrate~ zur Verfuegung
+stellen.  Die Basisklasse sollte dann erweitert werden, so dass die
+~send~ Methode zum Uebermitteln der Steuerdaten und bei Bedarf die
+~handle_button~ und ~handle_hat~ Methoden (diese werden beim Druecken
+von Knoepfen aufgerufen) zur Verfuegung stehen.  Ueber diese
+Spezialprofile sollte in der Klassenvariable ~profiles~ in der
+Basisklasse Buch gefuehrt werden.
+
+Ein Beispiel dazu findet sich in ~joystick.profiles~.  Dort wird
+allerdings noch eine Zwischenstufe verwendet, damit ein ~Commander~
+verschiedene Fahrzeugtypen simultan unterstuetzen kann.
+
+** Joystickdaten senden
+Um den Joystick zu benutzen, ruft man ~js =
+<Basisklasse>.create(<CommanderObjekt>)~ auf und startet die
+Uebermittlung von Steuersignalen mit ~js.send_loop().start()~.
+Alternativ kann man den Joystick auch automatisch erkennen lassen.
+Dazu muss man zunaechst das Profil registrieren, durch
+~profiles.register_profile(<Joystick Name>, <Basisklasse>)~, und ruft
+dann ~js = profiles.detect_joystick(<CommanderObjekt>)~ auf.
+
+
+* Anzeige der Fahrzeugdaten
+** Implementationen
+Momentan gibt es zwei Implementationen der im Folgenden beschriebenen
+Schnittstelle.  ~displays.terminal_out~ gibt die Daten einfach auf der
+Standardausgabe aus, waehrend ~displays.common~ eine Qt4-Oberflaeche
+enthaelt, die Armaturen zeichnet.
+
+** Erstellen der Anzeige
+Zum Benutzen mehrerer Displays verwendet man die Klasse ~MeterStack~.
+Diese besitzt eine Methode ~<anzeige> = <ms>.create_display(name, typ, interval,
+einheit)~, mit der man eine neue Fahrzeugdatenanzeige erstellt.
+Momentan wird nur der ~typ~ "circular" unterstuetzt.  Dies zeichnet eine
+analoge, kreisrunde Anzeige aehnlich wie z.B. den Tachometer in den
+meisten Autos.
+
+~interval~ kann entweder eine Liste sein, wobei der erste Eintrag den
+minimalen und der zweite den maximalen Wert bezeichnet.  Alternativ
+kann man "dynamic" angeben, dann wird die Anzeigen bei Werten, die den
+bisherigen Bereich uebersteigen, neu skaliert.
+
+~einheit~ muss nicht spezifiert werden und erlaubt, eine Einheit
+anzugeben.  ~name~ dient einfach zur Beschriftung der Anzeige.
+
+** Anzeigen von Werten
+Um schliesslich Daten auf der Anzeige auszugeben, ruft man auf der
+gewuenschten Anzeige die Methode ~<anzeige>.put(<wert>)~ auf.
+
+*** Standardausgabe
+Um diese Implementation zu benutzen, ist nichts weiter zu tun.
+
+*** Qt4-Oberflaeche
+~MeterStack~ erweitert ~QWidget~, kann also entweder als eigenes
+Fenster oder als Teil einer groesseren Anwendung angezeigt werden.  In
+jedem Fall braucht man eine ~QApplication~, deren Main-Loop noch
+gestartet werden muss.
+
+** Eigene Anzeigen entwerfen
+Um neue Anzeigen (fuer die Qt4-Oberflaeche) zu implementieren, reicht
+es, die Klasse ~common.Display~ abzuleiten.  Diese stellt schon die
+grundlegende Funktionalitaet wie dynamische Skalierung zur Verfuegung.
+Der aktuelle Wert wird in ~<display>._value~ gespeichert und die
+Grenzen koennen mit ~<display>.get_lower()~ und
+~<display>.get_upper()~ ermittelt werden.
+
+Neben der Methode ~<display>.put(<wert>)~ gibt es noch die Methode
+~<display>.recalc_bounds(<wert>)~ die aufgerufen wird, wenn dynamische
+Skalierung aktiviert ist und der neue Wert die alten Grenzen verletzt.
+
+Damit die eigene Anzeige auch mit dem ~MeterStack~ verwendet werden
+kann, muss man sie noch registrieren.  Dazu waehlt man eine
+Typbezeichnung und ruft ~MeterStack.register(<typ>, <DisplayKlasse>)~
+auf.
+
+** Anzeigen alleinstehend benutzen
+Die Anzeigen der Qt4-Oberflaeche erweitern ~QWidget~ und koennen auch
+ohne den ~MeterStack~ verwendet werden.  Der Konstruktor nimmt die
+selben Parameter wie ~<ms>.create_display~, statt ~typ~ allerdings den
+optionalen Parameter ~parent~, der an den Konstruktor von ~QWidget~
+weitergeleitet wird.
+
+** Threads und PyQt4
+Die ~put~ Methode sollte im Prinzip threadsicher sein.  Man sollte
+jedoch sicherstellen, dass der Qt-Main-Loop genug Zeit zur Verfuegung
+hat, um die Oberflaeche zu zeichnen.
