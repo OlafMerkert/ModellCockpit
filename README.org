@@ -1,5 +1,13 @@
 * ModellCockpit
-Kleine Python Module, um Modellfahrzeuge zu steuern und Fahrzeugdaten anzuzeigen.
+Kleine Python Module, um Modellfahrzeuge zu steuern und Fahrzeugdaten
+anzuzeigen.  Das ~joystick~-Modul kuemmert sich um das Auslesen von
+Joystickbefehlen zur Steuerung, mit dem ~displays~-Modul lassen sich
+kontinuierlich Fahrzeugdaten wie Drehzahl u.a. anzeigen.
+
+Die beiden Module sind vollkommen unabhaengig.  Zum Testen gibt es
+aber das Codebeispiel ~direct_sample~, das die Steuereingabe fuer eine
+Pistenwalze als Fahrzeugdaten ausgibt.
+
 
 * Steuerung des Fahrzeugs
 ** Modellierung des Fahrzeugs
