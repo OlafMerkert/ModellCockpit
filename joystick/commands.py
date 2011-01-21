@@ -72,3 +72,8 @@ class HeliCommander (Commander):
     def steuern_H(self, kollektiv, ruder, zyklisch_x, zyklisch_y):
         pass
 
+    def motor_aus(self):
+        """Schalte den Motor ab."""
+        pass
+
+    

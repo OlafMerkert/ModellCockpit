@@ -120,4 +120,69 @@ class G940_H (Steuerung_H, G940):
         schub = deadzone(0, diff_mix( -1, self.a(6) ), 0.05)
         return (schub, self.a(2), self.a(0), self.a(1))
 
+    def handle_button(self, nr):
+        if nr == 1:
+            self._commander.motor_aus()
+
 G940.register("H", G940_H)
+
+# ==============================================================================
+# Konfiguration TmHotasX
+
+class TmHotasX (Joystick, Steuerung):
+    profiles = {}
+
+    def __init__(self, cmdr, id = None):
+        if id == None:
+            Joystick.__init__(self, "T.Flight Hotas")
+        else:
+            Joystick.__init__(self, id)
+        Steuerung.__init__(self, cmdr)
+
+    def calibrate(self):
+        lo = self.calibrate_helper([], 0.05)
+        lo.start()
+        lo.wait()
+
+register_profile("Thrustmaster T.Flight Hotas X", TmHotasX)
+
+class TmHotasX_A (Steuerung_A, TmHotasX):
+
+    def axis_data(self):
+        return (self.a(2), self.a(0))
+
+TmHotasX.register("A", TmHotasX_A)
+
+class TmHotasX_P (Steuerung_P, TmHotasX):
+
+    def axis_data(self):
+        gas = deadzone(self.a(2), 0.05)
+        gang = sign(gas)
+        gas = abs(gas)
+        return (gas, self.a(0), gang)
+
+    def handle_button(self, nr):
+        if nr == 1:
+            self._commander.motor_aus()
+
+TmHotasX.register("P", TmHotasX_P)
+
+class TmHotasX_F (Steuerung_F, TmHotasX):
+
+    def axis_data(self):
+        schub = deadzone(diff_mix( self.a(2), 1), 0.05)
+        return (schub, self.a(4), self.a(0), self.a(1))
+
+TmHotasX.register("F", TmHotasX_F)
+
+class TmHotasX_H (Steuerung_H, TmHotasX):
+
+    def axis_data(self):
+        schub = deadzone(0, diff_mix( -1, self.a(2) ), 0.05)
+        return (schub, self.a(4), self.a(0), self.a(1))
+
+    def handle_button(self, nr):
+        if nr == 1:
+            self._commander.motor_aus()
+
+TmHotasX.register("H", TmHotasX_H)
