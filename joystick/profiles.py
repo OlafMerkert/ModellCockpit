@@ -117,7 +117,7 @@ G940.register("F", G940_F)
 class G940_H (Steuerung_H, G940):
 
     def axis_data(self):
-        schub = deadzone(0, diff_mix( -1, self.a(6) ), 0.05)
+        schub = deadzone(diff_mix( -1, self.a(6) ), 0.05)
         return (schub, self.a(2), self.a(0), self.a(1))
 
     def handle_button(self, nr):
@@ -178,7 +178,7 @@ TmHotasX.register("F", TmHotasX_F)
 class TmHotasX_H (Steuerung_H, TmHotasX):
 
     def axis_data(self):
-        schub = deadzone(0, diff_mix( -1, self.a(2) ), 0.05)
+        schub = deadzone(diff_mix( -1, self.a(2) ), 0.05)
         return (schub, self.a(4), self.a(0), self.a(1))
 
     def handle_button(self, nr):
