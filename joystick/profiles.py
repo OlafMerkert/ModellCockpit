@@ -186,3 +186,31 @@ class TmHotasX_H (Steuerung_H, TmHotasX):
             self._commander.motor_aus()
 
 TmHotasX.register("H", TmHotasX_H)
+
+# ==============================================================================
+# Konfiguration Driving Force GT
+
+class DrivingForce (Joystick, Steuerung):
+    profiles = {}
+
+    def __init__(sef, cmdr, id = None):
+        if id == None:
+            Joystick.__init__(self, "Driving Force")
+        else:
+            Joystick.__init__(self, id)
+        Steuerung.__init__(self, cmdr)
+
+    # TODO calibration if necessary
+
+# TODO verify joystick device name
+register_profile("Driving Force GT", DrivingForce)
+
+class DrivingForce_A (Steuerung_A, DrivingForce):
+
+    def axis_data(self):
+        # TODO select correct axes
+        gas = self.a(1)
+        lenkung = self.a(0)
+        return (gas, lenkung)
+
+DrivingForce.register("A", DrivingForce_A)
